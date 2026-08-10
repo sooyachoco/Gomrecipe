@@ -26,7 +26,7 @@ export default {
 
 async function handleApi(request, env, url) {
   if (!env.DB || !env.IMAGES) {
-    return json({ error: "Cloudflare D1/R2 바인딩이 아직 설정되지 않았습니다." }, 503);
+    return json({ error: "Cloudflare D1/KV 바인딩이 아직 설정되지 않았습니다." }, 503);
   }
 
   const method = request.method.toUpperCase();
@@ -111,8 +111,9 @@ async function handleApi(request, env, url) {
 
     const ext = extensionForType(file.type);
     const key = `recipes/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}.${ext}`;
-    await env.IMAGES.put(key, file.stream(), {
-      httpMetadata: { contentType: file.type, cacheControl: "public, max-age=31536000, immutable" },
+    const arrayBuffer = await file.arrayBuffer();
+    await env.IMAGES.put(key, arrayBuffer, {
+      metadata: { contentType: file.type },
     });
     return json({ key, url: `/media/${encodeURIComponentPath(key)}` }, 201);
   }
@@ -165,15 +166,14 @@ async function handleMedia(request, env, url) {
   const encoded = url.pathname.slice("/media/".length);
   if (!encoded) return new Response("Not Found", { status: 404 });
   const key = decodeURIComponent(encoded);
-  const object = await env.IMAGES.get(key);
-  if (!object) return new Response("Not Found", { status: 404 });
+  const { value, metadata } = await env.IMAGES.getWithMetadata(key, { type: "arrayBuffer" });
+  if (!value) return new Response("Not Found", { status: 404 });
 
   const headers = new Headers();
-  object.writeHttpMetadata(headers);
-  headers.set("etag", object.httpEtag);
-  headers.set("cache-control", object.httpMetadata?.cacheControl || "public, max-age=86400");
+  headers.set("content-type", metadata?.contentType || "application/octet-stream");
+  headers.set("cache-control", "public, max-age=31536000, immutable");
   if (request.method === "HEAD") return new Response(null, { headers });
-  return new Response(object.body, { headers });
+  return new Response(value, { headers });
 }
 
 function validateRecipe(body) {

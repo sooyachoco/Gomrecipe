@@ -6,19 +6,20 @@
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*", "/media/*"]
+    "run_worker_first": ["/api/*", "/media/*", "/images/*"]
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "gomjiyeon-recipe-db",
+      "database_id": "d401af71-203d-494f-988c-37b22a4c827b",
       "migrations_dir": "migrations"
     }
   ],
-  "r2_buckets": [
+  "kv_namespaces": [
     {
       "binding": "IMAGES",
-      "bucket_name": "gomjiyeon-recipe-images"
+      "id": "6ad2e9f6b9fd49d68fb26ef2f61ae11a"
     }
   ]
 }
